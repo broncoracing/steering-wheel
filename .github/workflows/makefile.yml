@@ -1,0 +1,26 @@
+name: Build check
+
+on:
+  push:
+    branches: [ main ]
+    # Only execute when firmware changes are made
+    paths: 'firmware/**'
+  pull_request:
+    branches: [ main ]
+    paths: 'firmware/**'
+
+jobs:
+  build:
+    name: build-check
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: fiam/arm-none-eabi-gcc@v1
+      with: 
+        release: '9-2019-q4' # The arm-none-eabi-gcc release to use.
+    
+    - name: Run build
+      run: make
+      working-directory: firmware
