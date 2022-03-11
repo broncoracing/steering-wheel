@@ -195,6 +195,36 @@ void drs_off() {
     printf("DRS disengaged\n");
 }
 
+// Detects when the settings button is held for 3 seconds
+Timeout change_brightness;
+
+void dim_leds() {
+    {
+        ScopedLock <Mutex> lock(
+                state.mutex); // Make sure the state isn't being otherwise modified or read while updating
+        if (state.brightness == DEFAULT_BRIGHTNESS) {
+            state.brightness = LOW_BRIGTNESS;
+        } else {
+            state.brightness = DEFAULT_BRIGHTNESS;
+        }
+    }
+
+    printf("LED brightness setting changed.\n");
+}
+
+void dim_handler() { queue.call(dim_leds); }
+
+void settings_pressed() {
+    change_brightness.attach(dim_handler, 3.0f);
+}
+
+void settings_released() {
+    change_brightness.detach();
+}
+
+
+
+
 
 // ISR handler functions for button presses during normal operation
 void upshift_handler() { queue.call(upshift); }
@@ -203,8 +233,8 @@ void downshift_handler() { queue.call(downshift); }
 void drs_on_handler() { queue.call(drs_on); }
 void drs_off_handler() { queue.call(drs_off); }
 
-void settings_pressed_handler() {} // TODO Dimming
-void settings_released_handler() {}
+void settings_pressed_handler() { queue.call(settings_pressed); } // TODO Dimming
+void settings_released_handler() { queue.call(settings_released); }
 
 int main()
 {

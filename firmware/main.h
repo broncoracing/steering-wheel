@@ -12,12 +12,12 @@
 
 
 // LED Brightness settings
-#define DEFAULT_BRIGHTNESS 0.2f
-#define LOW_BRIGTNESS 0.15f
+#define DEFAULT_BRIGHTNESS 1.0f
+#define LOW_BRIGTNESS 0.10f
 
 // TODO Reasonable values
-#define MIN_RPM 1000
-#define FLASH_RPM 14500 // Above this RPM the tachometer will flash
+#define MIN_RPM 5800
+#define FLASH_RPM 13800 // Above this RPM the tachometer will flash
 #define FLASH_TIME_S 0.15 // On time for the flashes
 
 #define MONEY_SHIFT_THRESHOLD 10200
