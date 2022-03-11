@@ -29,7 +29,8 @@ scripts/__pycache__/
 *.bak
 *.dwl
 *.dwl2
-
+*/__pycache__/
+__pychache__/
 # OSX
 **/.DS_Store
 .DS_Store
@@ -102,3 +103,13 @@ Desktop.ini
 
 # Jetbrains stuff
 **/.idea/
+
+# mbed stuff
+firmware/.mbed
+firmware/projectfiles
+firmware/mbed-os/
+firmware/mbed-os/*
+!firmware/mbed-os.lib
+firmware/BUILD
+firmware/cmake_build/
+firmware/cmake-build*/
