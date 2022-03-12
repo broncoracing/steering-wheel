@@ -87,6 +87,33 @@ void LEDs::tachLeds(int rpm, float brightness) {
     }
 }
 
+void LEDs::tachLedsRainbow(int rpm, float brightness, int hue_shift) {
+    if(rpm > FLASH_RPM) {
+        if(fmod(state_timer, FLASH_TIME_S) > FLASH_TIME_S / 2.0f){
+            for (int i = 0; i < MAIN_LED_COUNT; i++) {
+                pixels[i] = hsv((uint8_t)(i * 16 + hue_shift), 255, 255 * brightness);
+            }
+        } else {
+            Pixel off;
+            for (int i = 0; i < MAIN_LED_COUNT; i++) {
+                pixels[i] = off;
+            }
+        }
+    } else {
+        float num_lit_leds = (float)(rpm - MIN_RPM) / (float)(FLASH_RPM - MIN_RPM) * (float) MAIN_LED_COUNT;
+        for (int i = 0; i < MAIN_LED_COUNT; i++) {
+            float power = num_lit_leds - (float) (16 - i);
+            if(power > 1.0f) {
+                pixels[i] = hsv((uint8_t)(i * 16 + hue_shift), 255, 255 * brightness);
+            } else if (power > 0.0f) {
+                pixels[i] = hsv((uint8_t)(i * 16 + hue_shift), 255, 255 * brightness * power);
+            } else {
+                pixels[i] = hsv((uint8_t)(i * 16 + hue_shift), 255, 255 * brightness * 0.1);
+            }
+        }
+    }
+}
+
 void LEDs::updateLEDs(SteeringWheelState *state) {
     state_timer += (1.0f / LED_RATE);
 
@@ -132,6 +159,25 @@ void LEDs::updateLEDs(SteeringWheelState *state) {
                     }
                 }
                 auxLeds(state);
+            }
+                break;
+            case RainbowRoad:
+            {
+                int hue_shift = (int)(state_timer * 400.0f);
+                if(state->canReceived){
+                    tachLedsRainbow(state->rpm, state->brightness, hue_shift);
+                } else {
+                    float brightness = sin(state_timer * 6);
+                    brightness = brightness * brightness;
+                    uint8_t pixel_value = (uint8_t)(255.0f * brightness * state->brightness);
+                    Pixel pixel_color = hsv(hue_shift, 255, pixel_value);
+                    for (int i = 0; i < MAIN_LED_COUNT; i++) {
+                        pixels[i] = pixel_color;
+                    }
+                }
+                for (int i = 0; i < AUX_LED_COUNT; i++) {
+                    aux_pixels[i] = hsv((uint8_t)(i * 32 + 16 + hue_shift), 255, pixel_value);
+                }
             }
                 break;
             case ButtonTest:

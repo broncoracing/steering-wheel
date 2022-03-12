@@ -224,11 +224,11 @@ void settings_released() {
 
 
 
-
-
 // ISR handler functions for button presses during normal operation
 void upshift_handler() { queue.call(upshift); }
 void downshift_handler() { queue.call(downshift); }
+void upshift_off_handler() { queue.call(upshift_off); }
+void downshift_off_handler() { queue.call(downshift_off); }
 
 void drs_on_handler() { queue.call(drs_on); }
 void drs_off_handler() { queue.call(drs_off); }
@@ -287,6 +287,8 @@ int main()
     // Enable button callbacks for normal operation
     upshift_btn.fall(callback(upshift_handler));
     downshift_btn.fall(callback(downshift_handler));
+    upshift_btn.fall(callback(upshift_off_handler));
+    downshift_btn.fall(callback(downshift_off_handler));
 
     drs_btn.fall(callback(drs_on_handler));
     drs_btn.rise(callback(drs_off_handler));

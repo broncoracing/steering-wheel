@@ -19,6 +19,7 @@ Pixel hsv(uint8_t h, uint8_t s, uint8_t v);
 enum LEDState {
     StartupAnim, StartupSweep,
     Tachometer,
+    RainbowRoad,
     ButtonTest,
 };
 
@@ -36,6 +37,7 @@ private:
 
     void auxLeds(SteeringWheelState *state);
     void tachLeds(int rpm, float brightness);
+    void tachLedsRainbow(int rpm, float brightness, int hue_shift);
 public:
     LEDs();
     void updateLEDs(SteeringWheelState *state);
