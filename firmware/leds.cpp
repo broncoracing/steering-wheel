@@ -175,9 +175,8 @@ void LEDs::updateLEDs(SteeringWheelState *state) {
                         pixels[i] = pixel_color;
                     }
                 }
-                for (int i = 0; i < AUX_LED_COUNT; i++) {
-                    aux_pixels[i] = hsv((uint8_t)(i * 32 + 16 + hue_shift), 255, pixel_value);
-                }
+
+                auxLeds(state);
             }
                 break;
             case ButtonTest:
