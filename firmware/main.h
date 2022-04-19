@@ -15,7 +15,7 @@
 #define DEFAULT_BRIGHTNESS 1.0f
 #define LOW_BRIGTNESS 0.10f
 
-// TODO Reasonable values
+
 #define MIN_RPM 5800
 #define FLASH_RPM 13800 // Above this RPM the tachometer will flash
 #define FLASH_TIME_S 0.15 // On time for the flashes
@@ -37,8 +37,6 @@
 #define L1 15
 
 // CAN ID for RPM
-//TODO Put this into CAN_IDs repo and choose the actual ID
-#define ECU_RPM_ID 0x10
 #define ECU_RPM_BYTE 0
 
 

@@ -44,7 +44,7 @@ DebounceIn aux2_btn(AUX2_PIN, PullUp);
 bool isTestMode = false;
 
 void steering_wheel_received(CANMessage received) {
-    int rpm = (received.data[ECU_RPM_BYTE] << 8) + received.data[ECU_RPM_BYTE + 1];
+    int rpm = (received.data[ECU_RPM_BYTE + 1] << 8) + received.data[ECU_RPM_BYTE];
     {
         ScopedLock <Mutex> lock(state.mutex);
         state.rpm = rpm;
@@ -60,7 +60,7 @@ void can_received() {
     // Read newly received CAN messages until there aren't any
     while(can.read(received)){
 
-        if(received.id == ECU_RPM_ID) { // TODO Fix CAN ID
+        if(received.id == ECU1_ID) { // TODO Fix CAN ID
             printf("received RPM CAN frame\n");
             steering_wheel_received(received);
         }
@@ -227,8 +227,8 @@ void settings_released() {
 // ISR handler functions for button presses during normal operation
 void upshift_handler() { queue.call(upshift); }
 void downshift_handler() { queue.call(downshift); }
-void upshift_off_handler() { queue.call(upshift_off); }
-void downshift_off_handler() { queue.call(downshift_off); }
+void upshift_off_handler() { /*queue.call(upshift_off);*/ }
+void downshift_off_handler() { /*queue.call(downshift_off);*/ }
 
 void drs_on_handler() { queue.call(drs_on); }
 void drs_off_handler() { queue.call(drs_off); }
@@ -287,8 +287,8 @@ int main()
     // Enable button callbacks for normal operation
     upshift_btn.fall(callback(upshift_handler));
     downshift_btn.fall(callback(downshift_handler));
-    upshift_btn.fall(callback(upshift_off_handler));
-    downshift_btn.fall(callback(downshift_off_handler));
+    upshift_btn.rise(callback(upshift_off_handler));
+    downshift_btn.rise(callback(downshift_off_handler));
 
     drs_btn.fall(callback(drs_on_handler));
     drs_btn.rise(callback(drs_off_handler));
