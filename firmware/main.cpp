@@ -44,7 +44,7 @@ DebounceIn aux2_btn(AUX2_PIN, PullUp);
 bool isTestMode = false;
 
 void steering_wheel_received(CANMessage received) {
-    int rpm = (received.data[ECU_RPM_BYTE + 1] << 8) + received.data[ECU_RPM_BYTE];
+    int rpm = (received.data[ECU_RPM_BYTE] << 8) + received.data[ECU_RPM_BYTE+1];
     {
         ScopedLock <Mutex> lock(state.mutex);
         state.rpm = rpm;
