@@ -42,6 +42,7 @@ DebounceIn aux1_btn(AUX1_PIN, PullUp);
 DebounceIn aux2_btn(AUX2_PIN, PullUp);
 
 bool isTestMode = false;
+int btn_test_counter = 0;
 
 void steering_wheel_received(CANMessage received) {
     int rpm = (received.data[ECU_RPM_BYTE] << 8) + received.data[ECU_RPM_BYTE+1];
@@ -54,6 +55,11 @@ void steering_wheel_received(CANMessage received) {
     printf("RPM: %d\n", rpm);
 }
 
+void steering_wheel_rainbow() {
+    leds.updateState(RainbowRoad);
+}
+
+
 // Handle received can frames
 void can_received() {
     CANMessage received;
@@ -63,6 +69,8 @@ void can_received() {
         if(received.id == ECU1_ID) { // TODO Fix CAN ID
             printf("received RPM CAN frame\n");
             steering_wheel_received(received);
+        } else if(received.id == 999){
+            steering_wheel_rainbow();
         }
     }
 }
@@ -123,7 +131,11 @@ void test_mode() {
 
 // Goes into button test mode
 void test_mode_enable_handler() {
-    queue.call(test_mode);
+    btn_test_counter ++;
+    // Press settings 5 times for btn test mode
+    if(btn_test_counter >= 5){
+        queue.call(test_mode);
+    }
 }
 
 
