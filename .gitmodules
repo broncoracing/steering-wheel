@@ -1,3 +1,6 @@
 [submodule "firmware/can-ids"]
 	path = firmware/can-ids
 	url = git@github.com:broncoracing/can-ids.git
+[submodule "firmware/DebounceIn"]
+	path = firmware/DebounceIn
+	url = https://github.com/pilotak/DebounceIn
