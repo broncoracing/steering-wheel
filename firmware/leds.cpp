@@ -79,7 +79,7 @@ void LEDs::tachLeds(int rpm, float brightness) {
             if(power > 1.0f) {
                 pixels[i] = hsv((uint8_t)(i * 4), 255, 255 * brightness);
             } else if (power > 0.0f) {
-                pixels[i] = hsv((uint8_t)(i * 4), 255, 255 * brightness * power);
+                pixels[i] = hsv((uint8_t)(i * 4), 255, 255 * brightness * power * power);
             } else {
                 pixels[i] = Pixel();
             }
@@ -207,5 +207,41 @@ void LEDs::updateLEDs(SteeringWheelState *state) {
 }
 
 void LEDs::auxLeds(SteeringWheelState *state) {
-    // TODO Aux LED stuff
+    Pixel temperature_pixel;
+    {
+        ScopedLock <Mutex> lock(state->mutex);
+        if (state->ect < ENGINE_COLD_TEMP) { // Cold, light blue
+            temperature_pixel.r = 0;
+            temperature_pixel.g = 100;
+            temperature_pixel.b = 255;
+        } else if (state->ect < ENGINE_HOT_TEMP) { // Good temp, lights off
+            temperature_pixel.r = 0;
+            temperature_pixel.g = 0;
+            temperature_pixel.b = 0;
+        } else if (state->ect < ENGINE_VERY_HOT_TEMP) { // Hot, red
+            temperature_pixel.r = 255;
+            temperature_pixel.g = 50;
+            temperature_pixel.b = 0;
+        } else { // VERY hot, flashing
+            if(fmod(state_timer, FLASH_TIME_S) > FLASH_TIME_S / 2.0f){ // flash on
+                temperature_pixel.r = 255;
+                temperature_pixel.g = 50;
+                temperature_pixel.b = 0;
+            } else { // flash off
+                temperature_pixel.r = 0;
+                temperature_pixel.g = 0;
+                temperature_pixel.b = 0;
+            }
+        }
+    }
+    temperature_pixel.r *= state->brightness;
+    temperature_pixel.g *= state->brightness;
+    temperature_pixel.b *= state->brightness;
+    aux_pixels[0] = temperature_pixel;
+
+    if(state->rpm > 0) {
+        aux_pixels[3] = hsv(30, 255, state->brightness);
+    } else {
+        aux_pixels[3] = hsv(0, 0, 0);
+    }
 }

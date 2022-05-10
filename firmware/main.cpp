@@ -27,6 +27,9 @@ Thread t;
 // Periodically calls an ISR to update LEDs
 Ticker led_loop;
 
+// Periodically updates data to keep the ECU happy
+Ticker can_loop;
+
 // LED object, gets updated in a loop
 LEDs leds;
 
@@ -55,6 +58,17 @@ void steering_wheel_received(CANMessage received) {
     printf("RPM: %d\n", rpm);
 }
 
+void ecu2_received(CANMessage received) {
+    int ect = (received.data[ECU_ECT_BYTE + 1] << 8) + received.data[ECU_ECT_BYTE];
+    {
+        ScopedLock <Mutex> lock(state.mutex);
+        state.ect = ect;
+        state.canReceived = true;
+    }
+
+    printf("ECT: %d\n", ect);
+}
+
 void steering_wheel_rainbow() {
     leds.updateState(RainbowRoad);
 }
@@ -64,11 +78,13 @@ void steering_wheel_rainbow() {
 void can_received() {
     CANMessage received;
     // Read newly received CAN messages until there aren't any
-    while(can.read(received)){
+    while(can.read(received)) {
 
-        if(received.id == ECU1_ID) { // TODO Fix CAN ID
+        if (received.id == ECU1_ID) { // TODO Fix CAN ID
             printf("received RPM CAN frame\n");
             steering_wheel_received(received);
+        } else if(received.id == ECU2_ID){
+            ecu2_received(received);
         } else if(received.id == 999){
             steering_wheel_rainbow();
         }
@@ -86,9 +102,20 @@ void update_leds() {
     leds.updateLEDs(&state);
 }
 
+void send_can_message(bool drs, bool upshift, bool downshift, bool launch_ctl);
+
+void send_can() {
+    ScopedLock <Mutex> lock(state.mutex);
+    send_can_message(state.drsEngaged, false, false, state.launchCtlEngaged);
+}
+
 // ISR handler for LED loop
 void led_loop_handler(){
     queue.call(update_leds);
+}
+
+void can_send_handler(){
+    queue.call(send_can);
 }
 
 // ISR callback functions for button test mode
@@ -139,8 +166,8 @@ void test_mode_enable_handler() {
 }
 
 
-void send_can_message(bool drs, bool upshift, bool downshift) {
-    unsigned char buffer[3] = {0, 0, 0};
+void send_can_message(bool drs, bool upshift, bool downshift, bool launch_ctl) {
+    unsigned char buffer[4] = {0, 0, 0, 0};
     if(drs){
         buffer[0] = 1;
     }
@@ -152,7 +179,11 @@ void send_can_message(bool drs, bool upshift, bool downshift) {
     if(downshift){
         buffer[2] = 1;
     }
-    CANMessage msg(STEERING_WHEEL_ID, buffer, 3);
+
+    if(launch_ctl){
+        buffer[3] = 1;
+    }
+    CANMessage msg(STEERING_WHEEL_ID, buffer, 4);
 
     if(can.write(msg)){
         return;
@@ -167,7 +198,7 @@ void upshift() {
     {
         ScopedLock <Mutex> lock(state.mutex); // Make sure the state isn't being otherwise modified or read while updating
 
-        send_can_message(state.drsEngaged, true, false);
+        send_can_message(state.drsEngaged, true, false, state.launchCtlEngaged);
     }
 
     printf("Upshift message sent\n");
@@ -180,7 +211,7 @@ void downshift() {
             return;
         }
 
-        send_can_message(state.drsEngaged, false, true);
+        send_can_message(state.drsEngaged, false, true, state.launchCtlEngaged);
     }
 
     printf("Downshift message sent\n");
@@ -191,9 +222,9 @@ void drs_on() {
     {
         ScopedLock <Mutex> lock(state.mutex); // Make sure the state isn't being otherwise modified or read while updating
         state.drsEngaged = true;
+        send_can_message(true, false, false, state.launchCtlEngaged);
     }
 
-    send_can_message(true, false, false);
 
     printf("DRS engaged\n");
 }
@@ -201,8 +232,8 @@ void drs_off() {
     {
         ScopedLock <Mutex> lock(state.mutex); // Make sure the state isn't being otherwise modified or read while updating
         state.drsEngaged = false;
+        send_can_message(false, false, false, state.launchCtlEngaged);
     }
-    send_can_message(false, false, false);
 
     printf("DRS disengaged\n");
 }
@@ -234,7 +265,25 @@ void settings_released() {
     change_brightness.detach();
 }
 
+void launch_ctl_pressed() {
+    {
+        ScopedLock <Mutex> lock(state.mutex); // Make sure the state isn't being otherwise modified or read while updating
+        state.launchCtlEngaged = true;
+        send_can_message(state.drsEngaged, false, false, false);
+    }
 
+    printf("Launch ctl engaged\n");
+}
+
+void launch_ctl_released() {
+    {
+        ScopedLock <Mutex> lock(state.mutex); // Make sure the state isn't being otherwise modified or read while updating
+        state.launchCtlEngaged = false;
+        send_can_message(state.drsEngaged, false, false, false);
+    }
+
+    printf("Launch ctl disengaged\n");
+}
 
 // ISR handler functions for button presses during normal operation
 void upshift_handler() { queue.call(upshift); }
@@ -247,6 +296,10 @@ void drs_off_handler() { queue.call(drs_off); }
 
 void settings_pressed_handler() { queue.call(settings_pressed); } // TODO Dimming
 void settings_released_handler() { queue.call(settings_released); }
+
+
+void launch_ctl_pressed_handler() { queue.call(launch_ctl_pressed); } // TODO Dimming
+void launch_ctl_released_handler() { queue.call(launch_ctl_released); }
 
 int main()
 {
@@ -262,7 +315,9 @@ int main()
     // set up initial state
     state.brightness = DEFAULT_BRIGHTNESS;
     state.drsEngaged = false;
+    state.launchCtlEngaged = false;
     state.rpm = 0;
+    state.ect = 0;
 
     // Start event queue thread
     printf("Starting event queue thread...\n");
@@ -308,9 +363,13 @@ int main()
     settings_btn.fall(callback(settings_pressed_handler));
     settings_btn.rise(callback(settings_released_handler));
 
+    aux1_btn.fall(callback(launch_ctl_pressed_handler));
+    aux1_btn.rise(callback(launch_ctl_released_handler));
+
     // Enter into normal tachometer operation
     printf("Startup animation finished.\n");
     leds.updateState(Tachometer);
+    can_loop.attach(can_send_handler, 100ms);
 
     while(true){
 	    sleep();
