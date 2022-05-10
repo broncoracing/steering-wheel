@@ -1,0 +1,5 @@
+.mbedbuild
+cmake_build/
+cmake-build*/
+*/.hg/
+*/.hg/*
